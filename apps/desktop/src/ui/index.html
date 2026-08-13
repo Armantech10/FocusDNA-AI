@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusDNA AI Agent</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="titlebar-brand">
+      ⚡ Focus<span>DNA</span> AI Agent
+    </div>
+    <div id="sync-status" class="status-badge online">
+      <span id="sync-indicator">●</span> <span id="sync-text">Online</span>
+    </div>
+  </div>
+
+  <div class="app-container">
+
+    <!-- LOGIN SCREEN (If unauthenticated) -->
+    <div id="login-section" class="glass-card" style="display: none;">
+      <div class="card-title">Desktop Authentication</div>
+      <p style="font-size: 11px; color: var(--text-muted);">Sign in to sync desktop activity telemetry securely with your FocusDNA account.</p>
+      <input type="email" id="login-email" class="input-field" placeholder="Email address" value="arman@focusdna.ai">
+      <input type="password" id="login-password" class="input-field" placeholder="Password" value="••••••••">
+      <button id="btn-login" class="btn">Sign In to FocusDNA</button>
+    </div>
+
+    <!-- MAIN AGENT DASHBOARD (If authenticated) -->
+    <div id="main-section" style="display: flex; flex-direction: column; gap: 12px;">
+
+      <!-- Card 1: Active Tracking & Pause Controls -->
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-title">Telemetry Agent Control</div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tracking-toggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 12px; color: var(--text-muted);">Tracking Status:</span>
+          <strong id="tracking-status-text" style="font-size: 12px; color: var(--emerald);">Active (Monitoring)</strong>
+        </div>
+
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Pause Telemetry:</div>
+        <div class="pause-group">
+          <button class="btn btn-secondary pause-btn" data-mins="15">Pause 15m</button>
+          <button class="btn btn-secondary pause-btn" data-mins="30">Pause 30m</button>
+          <button class="btn btn-secondary pause-btn" data-mins="60">Pause 1h</button>
+        </div>
+      </div>
+
+      <!-- Card 2: Current Focus State & Active App -->
+      <div class="glass-card">
+        <div class="card-title">Current Focus State</div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div id="current-focus-state" class="metric-large" style="color: var(--emerald);">FOCUSED</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Rule Engine Score: <strong id="current-score" style="color: white;">85</strong></div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border); pt: 8px; margin-top: 4px; padding-top: 8px;">
+          Active Application: <strong id="active-app-name" style="color: white;">Finder</strong>
+        </div>
+      </div>
+
+      <!-- Card 3: Offline Queue & Sync Status -->
+      <div class="glass-card">
+        <div class="card-title">Offline Event Queue</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 12px; color: var(--text-muted);">Queued Events (Offline):</span>
+          <span id="queued-count" class="metric-large" style="font-size: 18px;">0</span>
+        </div>
+        <div style="font-size: 10px; color: var(--text-muted);">
+          If backend connectivity is lost, events persist locally and automatically flush upon reconnection.
+        </div>
+      </div>
+
+      <!-- Card 4: Privacy Dashboard -->
+      <div class="glass-card">
+        <div class="card-title">Privacy Safeguards Audit</div>
+        <div class="privacy-notice">
+          🛡️ <strong>Strict Privacy Active:</strong> Application names and durations are tracked. Keystrokes, passwords, private message text, screenshots, and clipboard content are 100% blocked.
+        </div>
+
+        <button id="btn-purge" class="btn btn-secondary" style="color: var(--rose); border-color: rgba(239, 68, 68, 0.3);">
+          Purge Local Queued Data
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

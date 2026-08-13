@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "FocusDNA AI Tracker",
+  "version": "1.0.0",
+  "description": "Privacy-first Chrome Extension for FocusDNA AI. Monitors tab domain switches without capturing raw text or keystrokes.",
+  "permissions": [
+    "tabs",
+    "idle",
+    "storage",
+    "alarms",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FocusDNA AI Attention Gauge"
+  },
+  "options_page": "options.html"
+}

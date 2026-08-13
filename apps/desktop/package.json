@@ -1,0 +1,22 @@
+{
+  "name": "focusdna-desktop",
+  "version": "1.0.0",
+  "description": "FocusDNA AI macOS Desktop Activity Telemetry Agent",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/offline_queue.test.js"
+  },
+  "keywords": [
+    "focusdna",
+    "electron",
+    "macos",
+    "wellness",
+    "telemetry"
+  ],
+  "author": "FocusDNA AI Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.2.0"
+  }
+}
