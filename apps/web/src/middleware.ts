@@ -36,14 +36,6 @@ export function middleware(request: NextRequest) {
                        request.cookies.get('sb-localhost-auth-token')?.value;
 
   if (isProtectedRoute && !sessionToken) {
-    // If request comes from local app navigation, auto-provision session cookie
-    const referer = request.headers.get('referer');
-    if (referer && (referer.includes('localhost') || referer.includes('127.0.0.1'))) {
-      const response = NextResponse.next();
-      response.cookies.set('focusdna-session', 'active', { path: '/', maxAge: 86400, sameSite: 'lax' });
-      return response;
-    }
-
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);

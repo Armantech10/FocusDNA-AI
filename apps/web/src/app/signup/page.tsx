@@ -42,35 +42,30 @@ export default function SignupPage() {
       });
 
       if (error) {
-        // If error is real auth error (e.g., user already registered), display it
-        if (!error.message.includes('fetch') && !error.message.includes('network')) {
-          setErrorMessage(error.message);
-          setLoading(false);
-          return;
-        }
+        setErrorMessage(error.message || 'Registration failed.');
+        setLoading(false);
+        return;
       }
 
-      // Store local dev user profile
-      const devProfile = {
-        email,
-        full_name: fullName,
-        user_id: data?.user?.id || `dev_user_${Date.now()}`
-      };
-      localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-      document.cookie = `focusdna-session=active; path=/; max-age=86400`;
-
-      router.push('/onboarding');
+      if (data?.user) {
+        document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
+        const devProfile = {
+          email,
+          full_name: fullName,
+          user_id: data.user.id
+        };
+        localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
+        router.push('/onboarding');
+        return;
+      } else {
+        setErrorMessage('Registration failed. Please check your details.');
+        setLoading(false);
+        return;
+      }
     } catch (err: any) {
-      // Fallback for local development when Supabase credentials are unconfigured or offline
-      const devProfile = {
-        email,
-        full_name: fullName,
-        user_id: `dev_user_${Date.now()}`
-      };
-      localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-      document.cookie = `focusdna-session=active; path=/; max-age=86400`;
-
-      router.push('/onboarding');
+      setErrorMessage(err.message || 'Registration failed.');
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }
@@ -84,7 +79,7 @@ export default function SignupPage() {
             <Zap className="h-6 w-6 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Create FocusDNA Account</h2>
-          <p className="text-xs text-gray-400">Start your privacy-first digital wellness journey.</p>
+          <p className="text-xs text-gray-400">Join the Attention Intelligence platform with strict zero-keystroke privacy.</p>
         </div>
 
         {errorMessage && (
@@ -104,7 +99,7 @@ export default function SignupPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Arman s"
+                placeholder="Arman Tech"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-900/80 border border-gray-800 text-sm text-white focus:outline-none focus:border-primary transition-colors"
               />
             </div>
@@ -155,22 +150,22 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 shrink-0" />
-            <span>Zero-keystroke privacy policy automatically applies to your account.</span>
+          <div className="p-3 rounded-2xl bg-gray-900/60 border border-gray-800 flex items-start gap-2.5 text-[11px] text-gray-400">
+            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span>By signing up, your telemetry is protected by zero-keystroke metadata privacy architecture.</span>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/30 hover:bg-primary-hover transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/30 hover:bg-primary-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>{loading ? 'Registering Account...' : 'Proceed to Onboarding'}</span>
+            <span>{loading ? 'Creating Account...' : 'Register'}</span>
             <ArrowRight className="h-4 w-4" />
           </button>
         </form>
 
-        <div className="text-center text-xs text-gray-400">
+        <div className="text-center text-xs text-gray-400 pt-2">
           Already have an account?{' '}
           <Link href="/login" className="text-primary font-semibold hover:underline">
             Sign in

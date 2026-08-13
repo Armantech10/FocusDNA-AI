@@ -19,13 +19,8 @@ function LoginForm() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        document.cookie = `focusdna-session=active; path=/; max-age=86400`;
+        document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
         router.push(redirectTarget);
-      } else {
-        const devUser = localStorage.getItem('focusdna_user');
-        if (devUser) {
-          document.cookie = `focusdna-session=active; path=/; max-age=86400`;
-        }
       }
     });
   }, [router, redirectTarget]);
@@ -36,36 +31,38 @@ function LoginForm() {
     setLoading(true);
 
     try {
+      // 1. Authenticate against Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      // 2. Strict Authentication Guard: If Supabase returns ANY error (e.g. Invalid login credentials), block immediately!
       if (error) {
-        if (!error.message.includes('fetch') && !error.message.includes('network')) {
-          setErrorMessage(error.message);
-          setLoading(false);
-          return;
-        }
+        setErrorMessage(error.message || 'Invalid email or password.');
+        setLoading(false);
+        return;
       }
 
-      const devProfile = {
-        email,
-        full_name: email.split('@')[0],
-        user_id: data?.user?.id || `dev_user_${Date.now()}`
-      };
-      localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-      document.cookie = `focusdna-session=active; path=/; max-age=86400`;
-      router.push(redirectTarget);
+      if (data?.session || data?.user) {
+        document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
+        const devProfile = {
+          email: data.user?.email || email,
+          full_name: data.user?.user_metadata?.full_name || email.split('@')[0],
+          user_id: data.user?.id || `user_${Date.now()}`
+        };
+        localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
+        router.push(redirectTarget);
+        return;
+      } else {
+        setErrorMessage('Authentication failed. Invalid login credentials.');
+        setLoading(false);
+        return;
+      }
     } catch (err: any) {
-      const devProfile = {
-        email,
-        full_name: email.split('@')[0],
-        user_id: `dev_user_${Date.now()}`
-      };
-      localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-      document.cookie = `focusdna-session=active; path=/; max-age=86400`;
-      router.push(redirectTarget);
+      setErrorMessage(err.message || 'Invalid email or password.');
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }
@@ -127,7 +124,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/30 hover:bg-primary-hover transition-all flex items-center justify-center gap-2 mt-2"
+          className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/30 hover:bg-primary-hover transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
         >
           <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
           <ArrowRight className="h-4 w-4" />
