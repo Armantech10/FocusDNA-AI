@@ -39,20 +39,6 @@ function LoginForm() {
 
       // 2. Strict Authentication Guard
       if (error) {
-        // If Supabase project URL is unconfigured/offline (returns 'Failed to fetch' or network error), fallback to standalone demo mode
-        if (error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('network')) {
-          const devProfile = {
-            email,
-            full_name: email.split('@')[0],
-            user_id: `user_${Date.now()}`
-          };
-          localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-          document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
-          router.push(redirectTarget);
-          return;
-        }
-
-        // Real auth error (e.g. Invalid login credentials) -> Reject login attempt!
         setErrorMessage(error.message || 'Invalid email or password.');
         setLoading(false);
         return;
@@ -74,15 +60,8 @@ function LoginForm() {
         return;
       }
     } catch (err: any) {
-      // Fallback for standalone demo mode when network/fetch fails
-      const devProfile = {
-        email,
-        full_name: email.split('@')[0],
-        user_id: `user_${Date.now()}`
-      };
-      localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-      document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
-      router.push(redirectTarget);
+      setErrorMessage(err.message || 'Invalid email or password.');
+      setLoading(false);
       return;
     } finally {
       setLoading(false);

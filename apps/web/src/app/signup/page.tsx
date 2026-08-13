@@ -42,19 +42,6 @@ export default function SignupPage() {
       });
 
       if (error) {
-        // Fallback for standalone demo mode if Supabase URL is unconfigured or offline
-        if (error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('network')) {
-          const devProfile = {
-            email,
-            full_name: fullName,
-            user_id: `user_${Date.now()}`
-          };
-          localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-          document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
-          router.push('/onboarding');
-          return;
-        }
-
         setErrorMessage(error.message || 'Registration failed.');
         setLoading(false);
         return;
@@ -62,12 +49,12 @@ export default function SignupPage() {
 
       if (data?.user) {
         document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
-        const devProfile = {
+        const userProfile = {
           email,
           full_name: fullName,
           user_id: data.user.id
         };
-        localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
+        localStorage.setItem('focusdna_user', JSON.stringify(userProfile));
         router.push('/onboarding');
         return;
       } else {
@@ -76,15 +63,8 @@ export default function SignupPage() {
         return;
       }
     } catch (err: any) {
-      // Fallback for standalone demo mode when fetch fails
-      const devProfile = {
-        email,
-        full_name: fullName,
-        user_id: `user_${Date.now()}`
-      };
-      localStorage.setItem('focusdna_user', JSON.stringify(devProfile));
-      document.cookie = `focusdna-session=active; path=/; max-age=86400; SameSite=Lax`;
-      router.push('/onboarding');
+      setErrorMessage(err.message || 'Registration failed.');
+      setLoading(false);
       return;
     } finally {
       setLoading(false);
@@ -187,7 +167,7 @@ export default function SignupPage() {
 
         <div className="text-center text-xs text-gray-400 pt-2">
           Already have an account?{' '}
-          <Link href="/login" className="text-primary font-semibold hover:underline">
+          <Link href="/signup" className="text-primary font-semibold hover:underline">
             Sign in
           </Link>
         </div>
