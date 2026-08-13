@@ -7,6 +7,7 @@ import { FocusScoreGauge } from '@/components/FocusScoreGauge';
 import { FocusScoreTrendChart } from '@/components/charts/FocusScoreTrendChart';
 import { FocusTimeChart } from '@/components/charts/FocusTimeChart';
 import { supabase } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/api';
 import { 
   Zap, 
   Clock, 
@@ -22,32 +23,34 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
+interface ProductionMlPrediction {
+  prediction: string;
+  probability: number;
+  modelVersion: string;
+  explanationFeatures: string[];
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
-  const [focusScore, setFocusScore] = useState<number | null>(null);
-  const [focusExplanation, setFocusExplanation] = useState<string>('');
-  const [focusState, setFocusState] = useState<string>('No Activity');
-  const [todayFocusMinutes, setTodayFocusMinutes] = useState<number>(0);
+  const [todayFocusMinutes, setTodayFocusMinutes] = useState(0);
   const [currentSessionName, setCurrentSessionName] = useState<string | null>(null);
-  const [appSwitchCount, setAppSwitchCount] = useState<number>(0);
-  const [distractionCount, setDistractionCount] = useState<number>(0);
+  const [appSwitchCount, setAppSwitchCount] = useState(0);
+  const [distractionCount, setDistractionCount] = useState(0);
+  const [focusScore, setFocusScore] = useState<number | null>(null);
+  const [focusExplanation, setFocusExplanation] = useState<string>('Optimal focus behavior detected.');
+  const [focusState, setFocusState] = useState<'Focused' | 'Distracted'>('Focused');
 
   // Production ML Prediction State (Exact API contract mapping)
-  const [productionMlResult, setProductionMlResult] = useState<{
-    prediction: string; // "focused" | "distracted"
-    probability: number; // 0.0 to 1.0
-    modelVersion: string;
-    explanationFeatures: string[];
-  } | null>(null);
+  const [productionMlResult, setProductionMlResult] = useState<ProductionMlPrediction | null>(null);
 
   const [scoreTrendData, setScoreTrendData] = useState<any[]>([]);
   const [focusTimeData, setFocusTimeData] = useState<any[]>([]);
 
   const fetchProductionMlPrediction = async (switches: number = 0, mins: number = 0, userId: string = 'demo_user') => {
     try {
-      const mlRes = await fetch('http://localhost:8000/api/ml/predict', {
+      const mlRes = await fetch(getApiUrl('/api/ml/predict'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer mock_valid_token_${userId}`,
@@ -124,7 +127,7 @@ export default function DashboardPage() {
 
         // Fetch Heuristic Score
         try {
-          const evalRes = await fetch('http://localhost:8000/api/focus/evaluate', {
+          const evalRes = await fetch(getApiUrl('/api/focus/evaluate'), {
             method: 'POST',
             headers: {
               'Authorization': `Bearer mock_valid_token_${userId}`,

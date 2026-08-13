@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { supabase } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/api';
 import { 
   Sparkles, 
   Check, 
@@ -41,7 +42,7 @@ export default function RecommendationsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/ai/recommendation', {
+      const res = await fetch(getApiUrl('/api/ai/recommendation'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer mock_valid_token_${userId}`,
@@ -88,7 +89,7 @@ export default function RecommendationsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/feedback', {
+      const res = await fetch(getApiUrl('/api/feedback'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer mock_valid_token_${userId}`,

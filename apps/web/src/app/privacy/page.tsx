@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { supabase } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/api';
 import { 
   ShieldCheck, 
   Download, 
@@ -27,7 +28,7 @@ export default function PrivacyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/profile', {
+      const res = await fetch(getApiUrl('/api/profile'), {
         headers: { 'Authorization': `Bearer mock_valid_token_${userId}` }
       });
       if (res.ok) {
@@ -49,7 +50,7 @@ export default function PrivacyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/privacy/export', {
+      const res = await fetch(getApiUrl('/api/privacy/export'), {
         headers: { 'Authorization': `Bearer mock_valid_token_${userId}` }
       });
       if (res.ok) {
@@ -81,7 +82,7 @@ export default function PrivacyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/privacy/purge', {
+      const res = await fetch(getApiUrl('/api/privacy/purge'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer mock_valid_token_${userId}` }
       });
@@ -103,7 +104,7 @@ export default function PrivacyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/privacy', {
+      const res = await fetch(getApiUrl('/api/privacy'), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer mock_valid_token_${userId}`,
@@ -132,7 +133,7 @@ export default function PrivacyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      await fetch('http://localhost:8000/api/privacy/revoke', {
+      await fetch(getApiUrl('/api/privacy/revoke'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer mock_valid_token_${userId}` }
       });

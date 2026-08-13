@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { supabase } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/api';
 import { 
   Dna, 
   Clock, 
@@ -44,7 +45,7 @@ export default function FocusDNAProfilePage() {
 
       // 1. Fetch from FastAPI Profile Engine
       try {
-        const res = await fetch('http://localhost:8000/api/profile/focusdna', {
+        const res = await fetch(getApiUrl('/api/profile/focusdna'), {
           headers: {
             'Authorization': `Bearer mock_valid_token_${userId}`
           }

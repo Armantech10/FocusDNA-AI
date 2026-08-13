@@ -6,6 +6,7 @@ import { FocusTimeChart } from '@/components/charts/FocusTimeChart';
 import { DistractionChart } from '@/components/charts/DistractionChart';
 import { AppSwitchingChart } from '@/components/charts/AppSwitchingChart';
 import { supabase } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/api';
 import { BarChart3, PieChart as PieIcon, Repeat, Clock, Target, AlertTriangle, RefreshCw, ThumbsUp, ShieldCheck } from 'lucide-react';
 
 interface FeedbackAnalyticsData {
@@ -27,7 +28,7 @@ export default function AnalyticsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'demo_user';
 
-      const res = await fetch('http://localhost:8000/api/feedback/analytics', {
+      const res = await fetch(getApiUrl('/api/feedback/analytics'), {
         headers: {
           'Authorization': `Bearer mock_valid_token_${userId}`
         }

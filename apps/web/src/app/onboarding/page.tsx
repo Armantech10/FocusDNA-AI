@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/api';
 import { ShieldCheck, CheckCircle2, Globe, User, Clock, ArrowRight, Shield } from 'lucide-react';
 
 export default function OnboardingPage() {
@@ -55,7 +56,7 @@ export default function OnboardingPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          await fetch('http://localhost:8000/api/onboarding', {
+          await fetch(getApiUrl('/api/onboarding'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
