@@ -3,10 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
-import { Zap, ArrowRight, ShieldCheck, LayoutDashboard, Lock, Mail, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Zap, ArrowRight, ShieldCheck, LayoutDashboard, Mail, Sparkles, CheckCircle2, Brain, Activity } from 'lucide-react';
 
-type ThemeColor = 'INDIGO' | 'CRIMSON' | 'EMERALD' | 'AMBER' | 'VIOLET';
+type ThemeColor = 'EMERALD' | 'INDIGO' | 'CRIMSON' | 'AMBER' | 'VIOLET';
 
 const THEMES: Record<ThemeColor, {
   label: string;
@@ -16,51 +15,57 @@ const THEMES: Record<ThemeColor, {
   gradientClass: string;
   accentText: string;
   badgeBg: string;
+  badgeLabel: string;
 }> = {
   EMERALD: {
     label: 'EMERALD',
-    studioTag: 'FOCUSDNA ATTENTION STUDIO',
-    headline: 'Lighting that sells the scene',
-    subhead: 'Dial in contrast, depth, and atmosphere across every focus session.',
-    gradientClass: 'bg-gradient-to-br from-emerald-950/80 via-teal-950/60 to-slate-950',
+    studioTag: 'ATTENTION INTELLIGENCE ENGINE',
+    headline: 'Predict distraction before it derails your momentum',
+    subhead: 'Real-time behavioral telemetry that learns your focus windows, context-switch fatigue, and peak cognitive stamina.',
+    gradientClass: 'bg-gradient-to-br from-emerald-950/90 via-teal-950/70 to-slate-950',
     accentText: 'text-emerald-400',
     badgeBg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+    badgeLabel: 'Supervised ML Classifier • F1 0.9776'
   },
   INDIGO: {
     label: 'INDIGO',
-    studioTag: 'PREDICTIVE ML MODEL',
-    headline: 'Predicting distraction before flow breaks',
-    subhead: 'Supervised Gradient Boosted Trees detecting context-switching fatigue in real time.',
+    studioTag: 'PREDICTIVE MACHINE LEARNING',
+    headline: '97.7% Accuracy in detecting focus fatigue',
+    subhead: 'Gradient Boosted Trees trained on application switches, idle windows, and workflow telemetry vectors.',
     gradientClass: 'bg-gradient-to-br from-indigo-950/90 via-slate-950 to-slate-950',
     accentText: 'text-indigo-400',
     badgeBg: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400',
+    badgeLabel: 'Isolation Forest Anomaly Detector'
   },
   CRIMSON: {
     label: 'CRIMSON',
-    studioTag: 'AI NUDGE INTERVENTIONS',
-    headline: 'Momentum engineered for deep work',
-    subhead: 'Personalized Gemini AI recommendations delivered precisely at peak cognitive fatigue.',
-    gradientClass: 'bg-gradient-to-br from-rose-950/80 via-pink-950/60 to-slate-950',
+    studioTag: 'GENERATIVE AI REASONING',
+    headline: 'Hyper-personalized nudges when focus slips',
+    subhead: 'Contextual Google Gemini AI recommendations delivered precisely when cognitive fatigue peaks.',
+    gradientClass: 'bg-gradient-to-br from-rose-950/90 via-pink-950/70 to-slate-950',
     accentText: 'text-rose-400',
     badgeBg: 'bg-rose-500/10 border-rose-500/30 text-rose-400',
+    badgeLabel: 'Google Gemini 1.5 Integration'
   },
   AMBER: {
     label: 'AMBER',
-    studioTag: 'ZERO-KEYSTROKE PRIVACY',
-    headline: 'Absolute privacy by architectural design',
-    subhead: '100% private process telemetry. Zero keystrokes, raw text, or screenshots captured.',
-    gradientClass: 'bg-gradient-to-br from-amber-950/80 via-orange-950/60 to-slate-950',
+    studioTag: 'PRIVACY-BY-DESIGN ARCHITECTURE',
+    headline: '100% Metadata privacy. Zero keystrokes captured.',
+    subhead: 'Your private thoughts, text, and screen content remain untouchable. Only application names and domain categories are processed.',
+    gradientClass: 'bg-gradient-to-br from-amber-950/90 via-orange-950/70 to-slate-950',
     accentText: 'text-amber-400',
     badgeBg: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+    badgeLabel: 'Zero-Keystroke Architecture'
   },
   VIOLET: {
     label: 'VIOLET',
-    studioTag: 'BEHAVIORAL PROFILE ENGINE',
-    headline: 'Decode your personal attention DNA',
-    subhead: 'Understand peak productivity windows, session stamina, and top distraction triggers.',
-    gradientClass: 'bg-gradient-to-br from-violet-950/80 via-purple-950/60 to-slate-950',
+    studioTag: 'BEHAVIORAL PROFILE ANALYSIS',
+    headline: 'Discover your unique digital focus fingerprint',
+    subhead: 'Track your optimal focus session duration, distraction triggers, and daily cognitive consistency over time.',
+    gradientClass: 'bg-gradient-to-br from-violet-950/90 via-purple-950/70 to-slate-950',
     accentText: 'text-violet-400',
     badgeBg: 'bg-violet-500/10 border-violet-500/30 text-violet-400',
+    badgeLabel: 'Personalized FocusDNA Profile Engine'
   },
 };
 
@@ -85,10 +90,10 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#08080C] text-white flex flex-col lg:flex-row overflow-hidden font-sans">
-      {/* LEFT SECTION (50% Split) - Minimalist Auth & Branding */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-14 lg:p-20 bg-[#08080C] z-10 border-r border-white/5 min-h-[50vh] lg:min-h-screen">
-        {/* Top Header Logo */}
+    <div className="min-h-screen w-full bg-[#07070A] text-white flex flex-col lg:flex-row overflow-hidden font-sans">
+      {/* LEFT SECTION (50% Split) - Authentication & Platform Launch */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-14 lg:p-20 bg-[#07070A] z-10 border-r border-white/5 min-h-[50vh] lg:min-h-screen">
+        {/* Header Logo */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-primary to-cyan-400 shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
@@ -103,11 +108,11 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Middle Content - Auth / Welcome Card */}
+        {/* Center Content Card */}
         <div className="max-w-md w-full mx-auto my-auto py-8 space-y-8 text-center">
-          {/* Logo Brand Icon Centered */}
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 shadow-xl shadow-indigo-500/20">
-            <Zap className="h-7 w-7 text-white" />
+          {/* Logo Badge Icon */}
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 shadow-xl shadow-indigo-500/25">
+            <Brain className="h-7 w-7 text-white" />
           </div>
 
           <div className="space-y-2">
@@ -121,7 +126,6 @@ export default function LandingPage() {
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-2">
-            {/* Primary Action Button - Sign In */}
             <Link
               href="/login"
               className="w-full py-3.5 px-6 rounded-2xl bg-gray-900/90 border border-gray-800 text-white font-medium text-sm hover:bg-gray-800/90 hover:border-gray-700 transition-all flex items-center justify-center gap-3 shadow-lg group"
@@ -130,7 +134,6 @@ export default function LandingPage() {
               <span>Continue with Email & Password</span>
             </Link>
 
-            {/* Quick Demo Access Button */}
             <button
               onClick={handleQuickDemoSession}
               disabled={isDemoLoading}
@@ -141,7 +144,6 @@ export default function LandingPage() {
               <ArrowRight className="h-4 w-4" />
             </button>
 
-            {/* Register Link */}
             <Link
               href="/signup"
               className="w-full py-3 px-6 rounded-2xl bg-transparent border border-transparent text-gray-400 font-semibold text-xs hover:text-white hover:border-gray-800 transition-all flex items-center justify-center gap-2"
@@ -150,7 +152,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Privacy Terms Notice */}
+          {/* Privacy Disclaimer */}
           <p className="text-[11px] text-gray-500 leading-relaxed pt-4">
             By proceeding, you acknowledge our{' '}
             <Link href="/privacy" className="underline hover:text-gray-300 transition-colors">
@@ -163,30 +165,30 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* Bottom Status Badge */}
+        {/* Bottom Status Indicator */}
         <div className="flex items-center justify-between text-xs text-gray-500 border-t border-white/5 pt-6">
           <span className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Zero-Keystroke Architecture
+            Zero-Keystroke Privacy Architecture
           </span>
           <span className="font-mono text-[11px]">v1.0.0</span>
         </div>
       </div>
 
-      {/* RIGHT SECTION (50% Split) - Atmospheric Studio Gradient & Interactive Themes */}
+      {/* RIGHT SECTION (50% Split) - Tailored FocusDNA Studio & Feature Showcase */}
       <div className={`w-full lg:w-1/2 relative min-h-[50vh] lg:min-h-screen flex flex-col justify-between p-8 sm:p-14 lg:p-20 transition-all duration-700 ease-in-out ${themeConfig.gradientClass}`}>
-        {/* Subtle Ambient Light Glow Orbs */}
+        {/* Ambient Light Orbs */}
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Top Studio Category Tag */}
+        {/* Studio Category Badge */}
         <div className="relative z-10">
-          <span className="text-[11px] font-mono tracking-widest uppercase text-gray-400 font-semibold">
+          <span className="text-[11px] font-mono tracking-widest uppercase text-gray-300 font-semibold">
             {themeConfig.studioTag}
           </span>
         </div>
 
-        {/* Middle Big Typography Section */}
+        {/* Tailored FocusDNA Typography & Features */}
         <div className="relative z-10 max-w-xl my-auto py-12 space-y-6">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-white leading-tight">
             {themeConfig.headline}
@@ -195,19 +197,19 @@ export default function LandingPage() {
             {themeConfig.subhead}
           </p>
 
-          <div className="pt-4 flex items-center gap-4 text-xs text-gray-400 font-medium">
-            <div className={`px-3 py-1 rounded-full border ${themeConfig.badgeBg} flex items-center gap-1.5`}>
+          <div className="pt-4 flex flex-wrap items-center gap-3 text-xs font-medium">
+            <div className={`px-3 py-1.5 rounded-full border ${themeConfig.badgeBg} flex items-center gap-1.5`}>
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Gradient Boosted Trees (F1: 0.9776)</span>
+              <span>{themeConfig.badgeLabel}</span>
             </div>
-            <div className="hidden sm:flex items-center gap-1.5 text-gray-400">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Google Gemini AI</span>
+            <div className="flex items-center gap-1.5 text-gray-300 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+              <Activity className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Real-Time Telemetry</span>
             </div>
           </div>
         </div>
 
-        {/* Bottom Right Interactive Theme Switcher Bar */}
+        {/* Bottom Theme Navigation Switcher */}
         <div className="relative z-10 flex flex-wrap items-center justify-end gap-6 pt-8 border-t border-white/10">
           {(Object.keys(THEMES) as ThemeColor[]).map((themeKey) => {
             const isActive = activeTheme === themeKey;
