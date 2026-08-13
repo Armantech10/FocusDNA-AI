@@ -2,6 +2,10 @@
 
 > **Privacy-first predictive attention intelligence that learns digital behavior and helps users understand and improve their focus.**
 
+## 🚀 Live Demo
+
+**[Open FocusDNA AI →](https://focus-dna-ai.vercel.app/)**
+
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.9-3776AB?style=flat-square&logo=python)
@@ -9,6 +13,7 @@
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase)
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML-F7931E?style=flat-square&logo=scikit-learn)
 ![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?style=flat-square&logo=electron)
+![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=flat-square&logo=vercel)
 
 ---
 
@@ -31,10 +36,22 @@ FocusDNA learns behavioral patterns associated with attention loss. By analyzing
 
 ---
 
-## Demo
+## Demo & Live Links
 
+- **Production App**: [https://focus-dna-ai.vercel.app/](https://focus-dna-ai.vercel.app/)
 - **GitHub Repository**: [https://github.com/Armantech10/FocusDNA-AI](https://github.com/Armantech10/FocusDNA-AI)
-- **Live Demo**: *Live demo coming soon.*
+
+---
+
+## Deployment
+
+FocusDNA AI is deployed live on Vercel:
+- **Production URL**: [https://focus-dna-ai.vercel.app/](https://focus-dna-ai.vercel.app/)
+- **CI/CD Pipeline**: Connected directly to the GitHub `main` branch. Pushing updates to `main` triggers automatic Vercel production deployments.
+- **Verified Deployed Services**:
+  - **Web Application**: `https://focus-dna-ai.vercel.app/`
+  - **Health Check Endpoint**: `https://focus-dna-ai.vercel.app/health` (`HTTP 200 {"status":"ok"}`)
+  - **ML Prediction Engine**: `https://focus-dna-ai.vercel.app/api/ml/predict` (`HTTP 200` live Gradient Boosted Trees inference verified)
 
 ---
 
@@ -134,6 +151,7 @@ graph TD
 | **Generative AI** | Google Gemini 1.5 Flash REST API | Server-side structured recommendation generation |
 | **Browser Extension** | Chrome Manifest V3, TypeScript, WebExtension API | Domain tab switch telemetry & offline storage |
 | **Desktop Agent** | Electron 28, Node.js, macOS `osascript` / `ioreg` | Application window polling & system idle detection |
+| **Deployment & Hosting** | Vercel (Next.js + Python Serverless Functions) | Unified production deployment & CI/CD pipeline |
 | **Containerization** | Docker, Docker Compose | Multi-stage production container deployment |
 | **Testing** | Pytest, TestClient, Node.js Test Harness | End-to-end backend and offline queue testing |
 
@@ -179,6 +197,7 @@ FocusDNA/
 │   ├── api/                    # FastAPI Python Backend REST Services & Routers
 │   ├── extension/              # Chrome Manifest V3 Extension (TypeScript)
 │   └── desktop/                # macOS Electron Desktop Telemetry Agent
+├── api/                        # Vercel Python Serverless Function Entrypoints
 ├── ml/                         # Machine Learning Pipeline & Serialized Models
 │   ├── data/                   # Synthetic & Behavioral Dataset Generators
 │   ├── docs/                   # ML Safety Lifecycle Documentation
@@ -191,6 +210,7 @@ FocusDNA/
 │   ├── ARCHITECTURE.md         # Detailed Mermaid Architecture Spec
 │   ├── DATABASE.md             # Supabase PostgreSQL Schema & RLS Policies
 │   └── deployment.md           # Production Vercel & Docker Deployment Guide
+├── vercel.json                 # Unified Production Vercel Project Deployment Config
 ├── Dockerfile                  # Production Multi-Stage Docker Build
 ├── docker-compose.yml          # Local Container Orchestration (FastAPI + Postgres)
 ├── .env.example                # Production Environment Variable Templates
@@ -280,7 +300,8 @@ See [docs/DATABASE.md](docs/DATABASE.md) for complete Supabase PostgreSQL schema
 - [x] macOS Electron Desktop Telemetry Agent with Offline Queue
 - [x] Chrome Manifest V3 Extension with Domain Telemetry Tracker
 - [x] User Data Rights APIs (Export Data, Delete Data, Pause Tracking, Revoke Consent)
-- [x] Multi-Stage Production Docker Containerization & Vercel Deployment Config
+- [x] Multi-Stage Production Docker Containerization
+- [x] Unified Vercel Production Deployment (`https://focus-dna-ai.vercel.app/`)
 - [ ] Native Windows Desktop Tracker (`win32` API abstraction)
 - [ ] Real-time WebSocket Attention Score Streaming
 
