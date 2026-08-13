@@ -2,12 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Zap, ShieldCheck, User, LogOut } from 'lucide-react';
 
 export function Navbar() {
+  const pathname = usePathname();
   const router = useRouter();
+
+  if (pathname === '/') {
+    return null;
+  }
+
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
 
