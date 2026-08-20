@@ -127,46 +127,110 @@ def resume_session(
 
     return {"status": "resumed", "session": session}
 
+from services.heuristics import BehavioralHeuristicScorer, FeatureAggregator
+from services.ml_service import ml_service
+from routers.events import user_events_db
+
 @router.post("/finish")
 def finish_session(
     data: SessionActionRequest, 
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
-    Finishes focus session, calculates duration, status statistics, and Heuristic Focus Score.
+    Finishes focus session, calculates duration, evaluates real telemetry events,
+    and runs Random Forest / Isolation Forest ML models on real feature vectors.
     """
     sessions = user_sessions_store.get(user.user_id, [])
     session = next((s for s in sessions if s["id"] == data.session_id), None)
     
     if not session:
-        raise HTTPException(status_code=404, detail="Focus session not found.")
+        # Create session fallback record if started client-side
+        session = {
+            "id": data.session_id,
+            "user_id": user.user_id,
+            "session_name": "Focus Session",
+            "planned_duration": data.actual_duration_minutes or 25,
+            "duration": data.actual_duration_minutes or 25,
+            "status": "completed",
+            "completed": True,
+            "start_time": datetime.utcnow().isoformat(),
+            "end_time": datetime.utcnow().isoformat(),
+            "distraction_count": data.distraction_count,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        if user.user_id not in user_sessions_store:
+            user_sessions_store[user.user_id] = []
+        user_sessions_store[user.user_id].append(session)
 
     now_str = datetime.utcnow().isoformat()
     session["status"] = "completed"
     session["completed"] = True
     session["end_time"] = now_str
-    session["distraction_count"] = data.distraction_count
     
     actual_mins = data.actual_duration_minutes if data.actual_duration_minutes is not None else session["planned_duration"]
     session["duration"] = actual_mins
 
-    # Calculate Heuristic Focus Score
-    heuristic_score = calculate_heuristic_focus_score(
-        planned_minutes=session["planned_duration"],
-        actual_minutes=actual_mins,
-        distraction_count=data.distraction_count,
-        status_state="completed"
-    )
-    session["heuristic_score"] = heuristic_score
+    # 1. Fetch real telemetry events matching this session or user's recent window
+    all_user_events = user_events_db.get(user.user_id, [])
+    session_events = [e for e in all_user_events if e.get("focus_session_id") == data.session_id]
+    
+    if not session_events:
+        session_events = all_user_events[-20:]
+
+    has_real_telemetry = len(session_events) > 0
+
+    # 2. Evaluate real Heuristic Focus Score
+    heuristic_eval = BehavioralHeuristicScorer.evaluate_focus_score(user.user_id, session_events)
+    session["distraction_count"] = max(data.distraction_count, int(heuristic_eval["breakdown"].get("social_penalty", 0) / 5) + int(heuristic_eval["breakdown"].get("entertainment_penalty", 0) / 4))
+
+    # 3. Extract 6-Feature ML Vector & Run ML Inference
+    feature_agg = FeatureAggregator.aggregate_features(user.user_id, session_events)
+    total_dur = max(1.0, float(feature_agg.get("session_duration", actual_mins * 60)) / 60.0)
+    total_switches = float(feature_agg.get("total_switches", 0))
+    soc_sec = float(feature_agg.get("social_media_duration", 0))
+    ent_sec = float(feature_agg.get("entertainment_duration", 0))
+    idle_sec = float(feature_agg.get("idle_seconds", 0))
+
+    ml_features = {
+        "switch_frequency_5m": round((total_switches / total_dur) * 5.0, 2),
+        "social_media_ratio": round(soc_sec / max(1.0, total_dur * 60.0), 3),
+        "entertainment_ratio": round(ent_sec / max(1.0, total_dur * 60.0), 3),
+        "idle_ratio": round(idle_sec / max(1.0, total_dur * 60.0), 3),
+        "session_elapsed_minutes": round(total_dur, 1),
+        "time_of_day_hour": datetime.utcnow().hour
+    }
+
+    ml_prediction = ml_service.predict_production_ml(ml_features)
+    anomaly_eval = ml_service.detect_anomaly({
+        "entertainment_duration_minutes": round(ent_sec / 60.0, 2),
+        "switch_frequency_5m": ml_features["switch_frequency_5m"],
+        "idle_seconds": idle_sec
+    })
+
+    session["heuristic_score"] = {
+        "score_value": heuristic_eval["score_value"],
+        "attribution": "Heuristic Focus Score",
+        "explanation": heuristic_eval["explanation"],
+        "is_distracted": heuristic_eval["is_distracted"],
+        "breakdown": heuristic_eval["breakdown"]
+    }
+    session["ml_prediction"] = ml_prediction
+    session["anomaly_evaluation"] = anomaly_eval
+    session["has_real_telemetry"] = has_real_telemetry
 
     return {
         "status": "finished",
         "session": session,
-        "statistics": {
-            "planned_duration_minutes": session["planned_duration"],
-            "actual_duration_minutes": actual_mins,
-            "distraction_count": data.distraction_count,
-            "heuristic_focus_score": heuristic_score
+        "telemetry_evaluated": {
+            "has_real_telemetry": has_real_telemetry,
+            "event_count": len(session_events),
+            "heuristic_score": heuristic_eval,
+            "ml_feature_vector": ml_features,
+            "ml_prediction": {
+                **ml_prediction,
+                "label_notice": "RandomForest Model (Synthetic Baseline Trained)"
+            },
+            "anomaly_detection": anomaly_eval
         }
     }
 

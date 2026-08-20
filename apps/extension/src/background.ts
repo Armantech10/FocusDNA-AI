@@ -47,7 +47,42 @@ try {
   // Ignore
 }
 
-// 4. Setup periodic alarm (Every 30 seconds)
+// 4. Listen for external messages from FocusDNA Web Application (Session & Auth Sync)
+const handleWebMessage = async (message: any, sender: any, sendResponse: any) => {
+  if (!message || typeof message !== 'object') return;
+
+  if (message.type === 'FOCUSDNA_SESSION_START') {
+    await chrome.storage.local.set({
+      active_focus_session_id: message.session_id,
+      user_token: message.token || null
+    });
+    // Immediately dispatch telemetry snapshot on session start
+    dispatchPeriodTelemetry();
+    sendResponse({ status: 'session_synced', session_id: message.session_id });
+  } else if (message.type === 'FOCUSDNA_SESSION_END') {
+    await chrome.storage.local.remove(['active_focus_session_id']);
+    // Dispatch final telemetry snapshot
+    dispatchPeriodTelemetry();
+    sendResponse({ status: 'session_ended' });
+  } else if (message.type === 'FOCUSDNA_AUTH_SYNC') {
+    await chrome.storage.local.set({
+      user_token: message.token || null
+    });
+    sendResponse({ status: 'auth_synced' });
+  }
+};
+
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  handleWebMessage(message, sender, sendResponse);
+  return true;
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  handleWebMessage(message, sender, sendResponse);
+  return true;
+});
+
+// 5. Setup periodic alarm (Every 30 seconds)
 try {
   chrome.alarms.create('focusdna_telemetry_alarm', { periodInMinutes: 0.5 });
   chrome.alarms.onAlarm.addListener((alarm) => {
@@ -68,6 +103,8 @@ async function dispatchPeriodTelemetry() {
     activeDomain = 'browser.tab';
   }
 
+  const storage = await chrome.storage.local.get(['active_focus_session_id']);
+
   const payload: TelemetryPayload = {
     website_domain: activeDomain,
     application_name: 'Google Chrome',
@@ -78,7 +115,8 @@ async function dispatchPeriodTelemetry() {
     idle_seconds: idleSeconds,
     typing_activity_level: idleSeconds > 30 ? 'idle' : 'medium',
     device_type: 'browser_extension',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    focus_session_id: storage.active_focus_session_id || null
   };
 
   const success = await sendTelemetryEvent(payload);

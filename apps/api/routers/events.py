@@ -21,6 +21,7 @@ class ActivityEventCreate(BaseModel):
     idle_seconds: int = Field(default=0, ge=0)
     typing_activity_level: str = Field(default="low")
     device_type: str = Field(default="desktop")
+    focus_session_id: Optional[str] = None
 
 @router.post("/events", status_code=status.HTTP_201_CREATED)
 def record_activity_event(
@@ -48,11 +49,17 @@ def record_activity_event(
     }
 
 @router.get("/events")
-def get_user_events(user: AuthenticatedUser = Depends(get_current_user)):
+def get_user_events(
+    focus_session_id: Optional[str] = None,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
     """
     Retrieves events strictly owned by authenticated user (User Isolation).
+    Optionally filter by focus_session_id.
     """
     events = user_events_db.get(user.user_id, [])
+    if focus_session_id:
+        events = [e for e in events if e.get("focus_session_id") == focus_session_id]
     return {
         "user_id": user.user_id,
         "count": len(events),

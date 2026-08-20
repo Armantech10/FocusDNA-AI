@@ -11,8 +11,15 @@
     "activeTab"
   ],
   "host_permissions": [
-    "http://localhost:8000/*"
+    "http://localhost:8000/*",
+    "https://focus-dna-ai.vercel.app/*"
   ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "https://focus-dna-ai.vercel.app/*"
+    ]
+  },
   "background": {
     "service_worker": "dist/background.js",
     "type": "module"

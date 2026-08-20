@@ -89,6 +89,36 @@ export default function FocusSessionPage() {
     return () => clearInterval(interval);
   }, [sessionState, secondsLeft]);
 
+  const broadcastExtensionMessage = async (type: string, sessionId?: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || localStorage.getItem('supabase.auth.token') || null;
+
+      // 1. PostMessage bridge for content script / background worker
+      window.postMessage({
+        source: 'FOCUSDNA_WEB_APP',
+        type,
+        session_id: sessionId,
+        token
+      }, '*');
+
+      // 2. Direct Chrome Extension message if available
+      if (typeof window !== 'undefined' && (window as any).chrome && (window as any).chrome.runtime && (window as any).chrome.runtime.sendMessage) {
+        try {
+          (window as any).chrome.runtime.sendMessage({
+            type,
+            session_id: sessionId,
+            token
+          });
+        } catch (e) {
+          // Ignore if extension ID not registered
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
+
   const handleStartSession = async (mins: number = targetMinutes) => {
     setTargetMinutes(mins);
     setSecondsLeft(mins * 60);
@@ -98,6 +128,9 @@ export default function FocusSessionPage() {
 
     const newId = `session_${Date.now()}`;
     setActiveSessionId(newId);
+
+    // Broadcast session start to Chrome extension
+    await broadcastExtensionMessage('FOCUSDNA_SESSION_START', newId);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -129,20 +162,49 @@ export default function FocusSessionPage() {
   const handleFinishSession = async () => {
     setSessionState('idle');
     const elapsedMinutes = Math.max(1, Math.round((targetMinutes * 60 - secondsLeft) / 60));
-    
+
+    // Broadcast session end to Chrome extension
+    await broadcastExtensionMessage('FOCUSDNA_SESSION_END', activeSessionId || undefined);
+
+    let recordedEvents: any[] = [];
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && activeSessionId) {
+        const { data: eventsData } = await supabase
+          .from('activity_events')
+          .select('*')
+          .eq('focus_session_id', activeSessionId);
+
+        if (eventsData && eventsData.length > 0) {
+          recordedEvents = eventsData;
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    const hasRealTelemetry = recordedEvents.length > 0;
+    const tabSwitches = recordedEvents.reduce((acc, e) => acc + (e.browser_switch_count || 0) + (e.app_switch_count || 0), 0);
+    const totalDistractions = recordedEvents.filter(e => e.category === 'social_media' || e.category === 'entertainment').length;
+    const effectiveDistractions = Math.max(distractionCount, totalDistractions);
+
     // Transparent Heuristic Score calculation
     const completionRatio = elapsedMinutes / targetMinutes;
-    const penalty = distractionCount * 8;
+    const penalty = effectiveDistractions * 8 + (tabSwitches > 5 ? (tabSwitches - 5) * 2 : 0);
     const heuristicScore = Math.max(0, Math.min(100, Math.round(100 * completionRatio - penalty)));
+
+    const explanationText = hasRealTelemetry
+      ? `Evaluated from ${recordedEvents.length} Chrome extension telemetry events (${tabSwitches} tab switches, ${effectiveDistractions} distraction domain triggers).`
+      : `Calculated from ${Math.round(completionRatio * 100)}% time completion. (No telemetry events captured for this session).`;
 
     const summary = {
       sessionName: `${targetMinutes}m Focus Session`,
       plannedMinutes: targetMinutes,
       actualMinutes: elapsedMinutes,
-      distractions: distractionCount,
+      distractions: effectiveDistractions,
       status: 'completed',
       heuristicScore: heuristicScore,
-      explanation: `Calculated from ${Math.round(completionRatio * 100)}% time completion and ${distractionCount} distraction triggers.`
+      explanation: explanationText
     };
     setSummaryData(summary);
 
@@ -152,7 +214,7 @@ export default function FocusSessionPage() {
       target_duration_minutes: targetMinutes,
       actual_duration_minutes: elapsedMinutes,
       status: 'completed',
-      distraction_count: distractionCount,
+      distraction_count: effectiveDistractions,
       started_at: new Date().toISOString(),
       heuristic_score: heuristicScore
     };
@@ -166,7 +228,7 @@ export default function FocusSessionPage() {
             actual_duration_minutes: elapsedMinutes,
             status: 'completed',
             ended_at: new Date().toISOString(),
-            distraction_count: distractionCount
+            distraction_count: effectiveDistractions
           })
           .eq('id', activeSessionId);
       }
@@ -182,6 +244,9 @@ export default function FocusSessionPage() {
   const handleCancelSession = async () => {
     setSessionState('idle');
     const elapsedMinutes = Math.max(1, Math.round((targetMinutes * 60 - secondsLeft) / 60));
+
+    // Broadcast session end to Chrome extension
+    await broadcastExtensionMessage('FOCUSDNA_SESSION_END', activeSessionId || undefined);
 
     const summary = {
       sessionName: `${targetMinutes}m Focus Session`,
