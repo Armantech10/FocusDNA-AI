@@ -20,6 +20,16 @@
       "https://focus-dna-ai.vercel.app/*"
     ]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://focus-dna-ai.vercel.app/*"
+      ],
+      "js": ["dist/content.js"],
+      "run_at": "document_start"
+    }
+  ],
   "background": {
     "service_worker": "dist/background.js",
     "type": "module"

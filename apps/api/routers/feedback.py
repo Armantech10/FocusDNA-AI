@@ -5,13 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from core.auth import get_current_user, AuthenticatedUser
 from ml.pipeline.retrain_pipeline import run_controlled_retraining_pipeline
+from ml.labeling import SessionLabelingEngine
+from routers.events import user_events_db
+from routers.sessions import user_sessions_store
 
 logger = logging.getLogger("focusdna_feedback")
 
 router = APIRouter(prefix="/api/feedback", tags=["User Feedback Learning Loop"])
 
-# In-memory store for feedback records (backed by Supabase PG in production)
+# In-memory store for feedback records and ml_session_labels (backed by Supabase PG in production)
 feedback_db: Dict[str, List[Dict[str, Any]]] = {} # user_id -> list of feedback dicts
+ml_session_labels_db: Dict[str, List[Dict[str, Any]]] = {} # user_id -> list of label dicts
 
 VALID_FEEDBACK_TYPES = [
     "helpful",
@@ -24,6 +28,10 @@ VALID_FEEDBACK_TYPES = [
 class FeedbackCreateRequest(BaseModel):
     prediction_id: Optional[str] = Field(default="pred_default")
     feedback_type: str = Field(...) # "helpful" | "not_helpful" | "was_actually_focused" | "was_distracted" | "dont_remind_again"
+
+class SessionRatingRequest(BaseModel):
+    focus_session_id: str
+    user_rating: int = Field(..., ge=1, le=5)
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def submit_user_feedback(
@@ -124,3 +132,74 @@ def trigger_controlled_retraining(user: AuthenticatedUser = Depends(get_current_
         "user_id": user.user_id,
         "pipeline_result": result
     }
+
+@router.post("/session-rating", status_code=status.HTTP_201_CREATED)
+def submit_session_rating(
+    payload: SessionRatingRequest,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Records 5-level user focus rating (1=Very focused .. 5=Very distracted)
+    and derives ground-truth binary target for ML dataset extraction.
+    Prevents duplicate labels for the same session via in-place upsert.
+    """
+    if user.user_id not in ml_session_labels_db:
+        ml_session_labels_db[user.user_id] = []
+
+    label_record = SessionLabelingEngine.create_label_record(
+        user_id=user.user_id,
+        focus_session_id=payload.focus_session_id,
+        user_rating=payload.user_rating,
+        label_source="user_session_rating"
+    )
+    label_record["created_at"] = datetime.utcnow().isoformat()
+
+    # In-place upsert to prevent duplicate labels for same session
+    user_labels = ml_session_labels_db[user.user_id]
+    existing_idx = next((i for i, l in enumerate(user_labels) if l["focus_session_id"] == payload.focus_session_id), None)
+    if existing_idx is not None:
+        user_labels[existing_idx] = label_record
+    else:
+        user_labels.append(label_record)
+
+    logger.info(f"[ML Label Log] User: {user.user_id[:8]} | Session: {payload.focus_session_id} | Rating: {payload.user_rating} ({label_record['rating_label']}) | Target: {label_record['binary_target']}")
+
+    return {
+        "status": "recorded",
+        "label_record": label_record
+    }
+
+@router.get("/session-labels")
+def get_user_session_labels(user: AuthenticatedUser = Depends(get_current_user)):
+    """
+    Retrieves all ground-truth labeled sessions for the user,
+    attaching exact telemetry events and session metadata for dataset extraction.
+    """
+    user_labels = ml_session_labels_db.get(user.user_id, [])
+    all_events = user_events_db.get(user.user_id, [])
+    all_sessions = user_sessions_store.get(user.user_id, [])
+
+    enriched_records = []
+    for label in user_labels:
+        sid = label["focus_session_id"]
+        session_events = [e for e in all_events if e.get("focus_session_id") == sid]
+        session_meta = next((s for s in all_sessions if s.get("id") == sid), {})
+
+        enriched_records.append({
+            "user_id": user.user_id,
+            "focus_session_id": sid,
+            "user_rating": label["user_rating"],
+            "rating_label": label["rating_label"],
+            "binary_target": label["binary_target"],
+            "label_source": label.get("label_source", "user_session_rating"),
+            "telemetry_events": session_events,
+            "session_meta": session_meta,
+            "created_at": label.get("created_at")
+        })
+
+    return {
+        "user_id": user.user_id,
+        "count": len(enriched_records),
+        "labeled_sessions": enriched_records
+    }
+

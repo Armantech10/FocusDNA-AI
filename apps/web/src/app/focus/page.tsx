@@ -47,6 +47,8 @@ export default function FocusSessionPage() {
   } | null>(null);
 
   const [sessionHistory, setSessionHistory] = useState<SessionRecord[]>([]);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [ratingSavedMessage, setRatingSavedMessage] = useState<string | null>(null);
 
   const loadHistory = async () => {
     try {
@@ -92,7 +94,15 @@ export default function FocusSessionPage() {
   const broadcastExtensionMessage = async (type: string, sessionId?: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || localStorage.getItem('supabase.auth.token') || null;
+      const devUserStr = typeof localStorage !== 'undefined' ? localStorage.getItem('focusdna_user') : null;
+      let devMockToken = null;
+      if (devUserStr) {
+        try {
+          const parsed = JSON.parse(devUserStr);
+          devMockToken = `mock_valid_token_${parsed.id || 'user_123'}`;
+        } catch (e) {}
+      }
+      const token = session?.access_token || localStorage.getItem('supabase.auth.token') || devMockToken || null;
 
       // 1. PostMessage bridge for content script / background worker
       window.postMessage({
@@ -239,6 +249,51 @@ export default function FocusSessionPage() {
     const currentHistory = [record, ...sessionHistory];
     setSessionHistory(currentHistory);
     localStorage.setItem('focusdna_sessions', JSON.stringify(currentHistory));
+  };
+
+  const handleSessionRating = async (ratingValue: number) => {
+    setSelectedRating(ratingValue);
+    const ratingMap: Record<number, { label: string; target: number }> = {
+      1: { label: 'very_focused', target: 0 },
+      2: { label: 'mostly_focused', target: 0 },
+      3: { label: 'neutral', target: 1 },
+      4: { label: 'distracted', target: 1 },
+      5: { label: 'very_distracted', target: 1 }
+    };
+    const { label, target } = ratingMap[ratingValue] || { label: 'neutral', target: 1 };
+    const sessionId = activeSessionId || `session_${Date.now()}`;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Upsert to Supabase ml_session_labels with RLS
+        await supabase.from('ml_session_labels').upsert({
+          user_id: user.id,
+          focus_session_id: sessionId,
+          user_rating: ratingValue,
+          rating_label: label,
+          binary_target: target,
+          label_source: 'user_session_rating',
+          feature_schema_version: '1.0'
+        }, { onConflict: 'user_id,focus_session_id' });
+      }
+
+      // Also persist to local session labels
+      const existingLabels = JSON.parse(localStorage.getItem('focusdna_session_labels') || '[]');
+      const filtered = existingLabels.filter((l: any) => l.focus_session_id !== sessionId);
+      filtered.push({
+        focus_session_id: sessionId,
+        user_rating: ratingValue,
+        rating_label: label,
+        binary_target: target,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('focusdna_session_labels', JSON.stringify(filtered));
+
+      setRatingSavedMessage(`Saved rating ${ratingValue}/5 (${label}). Ground-truth label recorded!`);
+    } catch (e) {
+      setRatingSavedMessage(`Recorded rating ${ratingValue}/5 (${label}) locally.`);
+    }
   };
 
   const handleCancelSession = async () => {
@@ -456,6 +511,45 @@ export default function FocusSessionPage() {
               </div>
               <div className="text-3xl font-black text-white font-mono">
                 {summaryData.heuristicScore} <span className="text-xs text-gray-400 font-normal">/ 100</span>
+              </div>
+            </div>
+
+            {/* Ground Truth Session Rating (Phase 2 Real Labeling Flow) */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-gray-900 via-primary/10 to-gray-900 border border-primary/30 text-center space-y-3">
+              <div className="text-xs font-semibold text-gray-200">
+                How focused were you during this session? <span className="text-gray-400 text-[10px] block font-normal">(Help train your personalized FocusDNA AI model)</span>
+              </div>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {[
+                  { label: "🌟 Very Focused", value: 1 },
+                  { label: "🙂 Mostly Focused", value: 2 },
+                  { label: "😐 Neutral", value: 3 },
+                  { label: "🙁 Distracted", value: 4 },
+                  { label: "😫 Very Distracted", value: 5 }
+                ].map((item) => {
+                  const isSelected = selectedRating === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => handleSessionRating(item.value)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                        isSelected
+                          ? 'bg-primary text-black border-primary font-bold shadow-lg shadow-primary/20 scale-105'
+                          : 'bg-gray-800/80 hover:bg-primary/30 border-gray-700 text-white'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {ratingSavedMessage && (
+                <div className="text-[11px] text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-800/50 py-1 px-3 rounded-lg inline-block">
+                  ✓ {ratingSavedMessage}
+                </div>
+              )}
+              <div className="text-[10px] text-gray-400 font-mono">
+                Model: v1.0.0-PrototypeBaseline (Collecting real session labels to enable personalized ML)
               </div>
             </div>
           </div>

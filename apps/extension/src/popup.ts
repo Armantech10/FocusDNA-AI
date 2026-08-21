@@ -16,33 +16,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (activeDomainEl) activeDomainEl.textContent = 'browser.tab';
   }
 
-  // 2. Load storage state
-  const storage = await chrome.storage.local.get(['is_tracking_paused']);
-  let isPaused = storage.is_tracking_paused || false;
+  // 2. Load canonical tracking state from chrome.storage.local (default to true unless explicitly false)
+  const storage = await chrome.storage.local.get(['tracking_enabled']);
+  let isEnabled = storage.tracking_enabled !== false;
 
-  updateUI(isPaused);
+  updateUI(isEnabled);
 
-  togglePauseBtn.addEventListener('click', async () => {
-    isPaused = !isPaused;
-    await chrome.storage.local.set({ is_tracking_paused: isPaused });
-    updateUI(isPaused);
+  // 3. Reactively update popup when chrome.storage changes in background or options
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.tracking_enabled) {
+      isEnabled = changes.tracking_enabled.newValue !== false;
+      updateUI(isEnabled);
+    }
   });
 
-  function updateUI(paused: boolean) {
-    if (paused) {
-      if (statusBadge) {
-        statusBadge.textContent = 'Paused';
-        statusBadge.className = 'status-badge paused';
-      }
-      togglePauseBtn.textContent = 'Resume Tracking';
-      togglePauseBtn.className = 'btn btn-resume';
-    } else {
+  // 4. Toggle canonical tracking_enabled on button click
+  togglePauseBtn.addEventListener('click', async () => {
+    const nextState = !isEnabled;
+    isEnabled = nextState;
+    await chrome.storage.local.set({ tracking_enabled: nextState });
+    updateUI(nextState);
+  });
+
+  function updateUI(enabled: boolean) {
+    if (enabled) {
       if (statusBadge) {
         statusBadge.textContent = 'Active';
         statusBadge.className = 'status-badge';
       }
-      togglePauseBtn.textContent = 'Pause Tracking';
-      togglePauseBtn.className = 'btn btn-pause';
+      if (togglePauseBtn) {
+        togglePauseBtn.textContent = 'Pause Tracking';
+        togglePauseBtn.className = 'btn btn-pause';
+      }
+    } else {
+      if (statusBadge) {
+        statusBadge.textContent = 'Paused';
+        statusBadge.className = 'status-badge paused';
+      }
+      if (togglePauseBtn) {
+        togglePauseBtn.textContent = 'Resume Tracking';
+        togglePauseBtn.className = 'btn btn-resume';
+      }
     }
   }
 });

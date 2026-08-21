@@ -5,6 +5,34 @@ let tabSwitchCount = 0;
 let idleSeconds = 0;
 let lastSyncTimestamp = Date.now();
 
+// 0. Ensure canonical tracking_enabled is initialized (defaults to true)
+async function initCanonicalTrackingState() {
+  try {
+    const storage = await chrome.storage.local.get(['tracking_enabled']);
+    if (typeof storage.tracking_enabled !== 'boolean') {
+      await chrome.storage.local.set({ tracking_enabled: true });
+      console.log('[FocusDNA Extension] Initialized CANONICAL tracking_enabled = true');
+    } else {
+      console.log(`[FocusDNA Extension] Restored CANONICAL tracking_enabled = ${storage.tracking_enabled}`);
+    }
+  } catch (e) {
+    console.warn('[FocusDNA Extension] Failed to init canonical tracking state:', e);
+  }
+}
+
+initCanonicalTrackingState();
+
+chrome.runtime.onInstalled.addListener(() => {
+  initCanonicalTrackingState();
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes.tracking_enabled) {
+    const newVal = changes.tracking_enabled.newValue;
+    console.log(`[FocusDNA Extension] CANONICAL tracking_enabled changed to = ${newVal}`);
+  }
+});
+
 // 1. Listen for active tab activation (Tab Context Switch)
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   tabSwitchCount++;
@@ -47,27 +75,36 @@ try {
   // Ignore
 }
 
-// 4. Listen for external messages from FocusDNA Web Application (Session & Auth Sync)
+// 4. Listen for external and content script messages from FocusDNA Web Application
 const handleWebMessage = async (message: any, sender: any, sendResponse: any) => {
   if (!message || typeof message !== 'object') return;
 
   if (message.type === 'FOCUSDNA_SESSION_START') {
-    await chrome.storage.local.set({
-      active_focus_session_id: message.session_id,
-      user_token: message.token || null
-    });
+    const updateData: Record<string, any> = {
+      active_focus_session_id: message.session_id
+    };
+    if (message.token) {
+      updateData.user_token = message.token;
+    }
+    await chrome.storage.local.set(updateData);
+    console.log(`[FocusDNA Extension] FOCUSDNA_SESSION_START: session_id=${message.session_id}, token_synced=${!!message.token}`);
     // Immediately dispatch telemetry snapshot on session start
     dispatchPeriodTelemetry();
     sendResponse({ status: 'session_synced', session_id: message.session_id });
   } else if (message.type === 'FOCUSDNA_SESSION_END') {
     await chrome.storage.local.remove(['active_focus_session_id']);
+    console.log('[FocusDNA Extension] FOCUSDNA_SESSION_END: active focus session cleared.');
     // Dispatch final telemetry snapshot
     dispatchPeriodTelemetry();
     sendResponse({ status: 'session_ended' });
   } else if (message.type === 'FOCUSDNA_AUTH_SYNC') {
-    await chrome.storage.local.set({
-      user_token: message.token || null
-    });
+    if (message.token) {
+      await chrome.storage.local.set({ user_token: message.token });
+      console.log('[FocusDNA Extension] FOCUSDNA_AUTH_SYNC: user_token successfully updated.');
+    } else {
+      await chrome.storage.local.remove(['user_token']);
+      console.log('[FocusDNA Extension] FOCUSDNA_AUTH_SYNC: user_token cleared.');
+    }
     sendResponse({ status: 'auth_synced' });
   }
 };

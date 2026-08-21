@@ -25,27 +25,36 @@ export function getDefaultApiEndpoint(): string {
 
 export async function sendTelemetryEvent(payload: TelemetryPayload): Promise<boolean> {
   try {
-    const storage = await chrome.storage.local.get(['is_tracking_paused', 'api_endpoint', 'user_token', 'active_focus_session_id']);
+    const storage = await chrome.storage.local.get(['tracking_enabled', 'api_endpoint', 'user_token', 'active_focus_session_id']);
     
-    if (storage.is_tracking_paused) {
-      console.log('[FocusDNA Extension] Telemetry skipped: tracking is currently PAUSED.');
+    // Canonical default is true unless explicitly set to false
+    const isTrackingEnabled = storage.tracking_enabled !== false;
+
+    if (!isTrackingEnabled) {
+      console.log('[FocusDNA Extension] CANONICAL tracking_enabled = false');
+      console.log('[FocusDNA Extension] Telemetry skipped because tracking_enabled=false');
       return false;
     }
 
+    console.log('[FocusDNA Extension] CANONICAL tracking_enabled = true');
+    console.log('[FocusDNA Extension] Telemetry allowed');
+
     const endpoint = storage.api_endpoint || getDefaultApiEndpoint();
     const token = storage.user_token || null;
+
+    if (!token) {
+      console.log('[FocusDNA Extension] Telemetry skipped: No active user authentication token found. Please sign in or start a Focus Session on the web app.');
+      return false;
+    }
 
     if (storage.active_focus_session_id) {
       payload.focus_session_id = storage.active_focus_session_id;
     }
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -58,6 +67,7 @@ export async function sendTelemetryEvent(payload: TelemetryPayload): Promise<boo
       return false;
     }
 
+    console.log('[FocusDNA Extension] Telemetry successfully dispatched to API (HTTP 201).');
     return true;
   } catch (err) {
     console.warn('[FocusDNA Extension] Telemetry server unreachable:', err);

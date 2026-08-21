@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
 
-from routers import profile, events, sessions, categories, predictions, recommendations, feedback
+from routers import profile, events, sessions, categories, predictions, recommendations, feedback, ml_monitoring
 
 app = FastAPI(
     title="FocusDNA AI API",
@@ -30,6 +30,7 @@ app.include_router(categories.router)
 app.include_router(predictions.router)
 app.include_router(recommendations.router)
 app.include_router(feedback.router)
+app.include_router(ml_monitoring.router)
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
 def health_check():

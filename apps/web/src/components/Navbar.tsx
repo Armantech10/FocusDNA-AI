@@ -17,11 +17,21 @@ export function Navbar() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
 
-  const checkUserSession = () => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUserEmail(user.email || null);
-        setDisplayName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
+  const checkUserSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserEmail(session.user.email || null);
+        setDisplayName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User');
+        
+        // Sync valid session token to Chrome extension bridge
+        if (session.access_token) {
+          window.postMessage({
+            source: 'FOCUSDNA_WEB_APP',
+            type: 'FOCUSDNA_AUTH_SYNC',
+            token: session.access_token
+          }, '*');
+        }
       } else {
         const devUserStr = localStorage.getItem('focusdna_user');
         if (devUserStr) {
@@ -29,6 +39,12 @@ export function Navbar() {
             const devUser = JSON.parse(devUserStr);
             setUserEmail(devUser.email || null);
             setDisplayName(devUser.full_name || devUser.email?.split('@')[0] || 'User');
+            // Dev mock token
+            window.postMessage({
+              source: 'FOCUSDNA_WEB_APP',
+              type: 'FOCUSDNA_AUTH_SYNC',
+              token: `mock_valid_token_${devUser.id || 'user_123'}`
+            }, '*');
           } catch (e) {
             setUserEmail(null);
             setDisplayName(null);
@@ -38,14 +54,29 @@ export function Navbar() {
           setDisplayName(null);
         }
       }
-    });
+    } catch (e) {
+      // Ignore
+    }
   };
 
   useEffect(() => {
     checkUserSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       checkUserSession();
+      if (session?.access_token) {
+        window.postMessage({
+          source: 'FOCUSDNA_WEB_APP',
+          type: 'FOCUSDNA_AUTH_SYNC',
+          token: session.access_token
+        }, '*');
+      } else if (event === 'SIGNED_OUT') {
+        window.postMessage({
+          source: 'FOCUSDNA_WEB_APP',
+          type: 'FOCUSDNA_AUTH_SYNC',
+          token: null
+        }, '*');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -57,6 +88,11 @@ export function Navbar() {
     } catch (e) {
       // Ignore network errors on logout
     }
+    window.postMessage({
+      source: 'FOCUSDNA_WEB_APP',
+      type: 'FOCUSDNA_AUTH_SYNC',
+      token: null
+    }, '*');
     localStorage.removeItem('focusdna_user');
     document.cookie = 'focusdna-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     setUserEmail(null);
